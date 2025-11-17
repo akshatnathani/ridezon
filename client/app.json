@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "client",
-    "slug": "client",
+    "name": "Ridezon",
+    "slug": "ridezon",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "client",
+    "scheme": "ridezon",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

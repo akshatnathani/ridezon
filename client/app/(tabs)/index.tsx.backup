@@ -1,0 +1,680 @@
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Platform,
+  Modal,
+  StatusBar,
+} from 'react-native';
+
+interface Ride {
+  id: string;
+  driverName: string;
+  pickup: string;
+  dropoff: string;
+  date: string;
+  time: string;
+  seats: number;
+  price: number;
+  description?: string;
+}
+
+export default function HomeScreen() {
+  const [rides, setRides] = useState<Ride[]>([
+    {
+      id: '1',
+      driverName: 'John Doe',
+      pickup: 'Downtown Station',
+      dropoff: 'Airport Terminal 1',
+      date: '2025-11-15',
+      time: '14:30',
+      seats: 3,
+      price: 15,
+      description: 'Comfortable ride with AC',
+    },
+    {
+      id: '2',
+      driverName: 'Jane Smith',
+      pickup: 'Central Park',
+      dropoff: 'Business District',
+      date: '2025-11-15',
+      time: '09:00',
+      seats: 2,
+      price: 10,
+    },
+    {
+      id: '3',
+      driverName: 'Mike Johnson',
+      pickup: 'University Campus',
+      dropoff: 'Shopping Mall',
+      date: '2025-11-16',
+      time: '16:00',
+      seats: 4,
+      price: 8,
+      description: 'Student friendly ride',
+    },
+  ]);
+
+  const [filteredRides, setFilteredRides] = useState<Ride[]>(rides);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddRideModal, setShowAddRideModal] = useState(false);
+  
+  const [showPickupOptions, setShowPickupOptions] = useState(false);
+  const [showDropoffOptions, setShowDropoffOptions] = useState(false);
+
+  const locations = ['Downtown', 'Airport', 'University', 'Mall', 'Station', 'Beach', 'Other'];
+
+  const [newRide, setNewRide] = useState({
+    pickup: '',
+    dropoff: '',
+    date: '',
+    time: '',
+    seats: '',
+    price: '',
+    description: '',
+  });
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredRides(rides);
+    } else {
+      const filtered = rides.filter(
+        (ride) =>
+          ride.pickup.toLowerCase().includes(query.toLowerCase()) ||
+          ride.dropoff.toLowerCase().includes(query.toLowerCase()) ||
+          ride.driverName.toLowerCase().includes(query.toLowerCase()) ||
+          ride.date.includes(query)
+      );
+      setFilteredRides(filtered);
+    }
+  };
+
+  const handleAddRide = () => {
+    if (newRide.pickup && newRide.dropoff && newRide.date && newRide.time && newRide.seats && newRide.price) {
+      const ride: Ride = {
+        id: Date.now().toString(),
+        driverName: 'You',
+        pickup: newRide.pickup,
+        dropoff: newRide.dropoff,
+        date: newRide.date,
+        time: newRide.time,
+        seats: parseInt(newRide.seats),
+        price: parseFloat(newRide.price),
+        description: newRide.description,
+      };
+      
+      const updatedRides = [...rides, ride];
+      setRides(updatedRides);
+      setFilteredRides(updatedRides);
+      
+      setNewRide({
+        pickup: '',
+        dropoff: '',
+        date: '',
+        time: '',
+        seats: '',
+        price: '',
+        description: '',
+      });
+      
+      setShowAddRideModal(false);
+    }
+  };
+
+  const handleNewRideChange = (field: string, value: string) => {
+    setNewRide({ ...newRide, [field]: value });
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Rides</Text>
+        <TouchableOpacity style={styles.addButton} onPress={() => setShowAddRideModal(true)}>
+          <Text style={styles.addButtonText}>+ Offer</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Where to?"
+            value={searchQuery}
+            onChangeText={handleSearch}
+            placeholderTextColor="#8e8e93"
+          />
+        </View>
+      </View>
+
+      <ScrollView 
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+
+
+          {filteredRides.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No rides available</Text>
+              <Text style={styles.emptyStateSubtext}>Try adjusting your search or check back later</Text>
+            </View>
+          ) : (
+            filteredRides.map((ride) => (
+              <TouchableOpacity key={ride.id} style={styles.rideCard}>
+                <View style={styles.rideTopSection}>
+                  <View style={styles.rideMainInfo}>
+                    <Text style={styles.rideTime}>{ride.time}</Text>
+                    <View style={styles.routeInfo}>
+                      <View style={styles.routePoint}>
+                        <View style={styles.pickupDot} />
+                        <Text style={styles.locationText} numberOfLines={1}>{ride.pickup}</Text>
+                      </View>
+                      <View style={styles.routeDivider} />
+                      <View style={styles.routePoint}>
+                        <View style={styles.dropoffDot} />
+                        <Text style={styles.locationText} numberOfLines={1}>{ride.dropoff}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.priceSection}>
+                    <Text style={styles.priceText}>${ride.price}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.rideDivider} />
+
+                <View style={styles.rideBottomSection}>
+                  <View style={styles.driverSection}>
+                    <View style={styles.driverAvatar}>
+                      <Text style={styles.driverAvatarText}>
+                        {ride.driverName.split(' ').map(n => n[0]).join('')}
+                      </Text>
+                    </View>
+                    <Text style={styles.driverName}>{ride.driverName}</Text>
+                  </View>
+                  <View style={styles.seatsInfo}>
+                    <Text style={styles.seatsText}>{ride.seats} seats</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+      </ScrollView>
+
+      {/* Add Ride Modal */}
+      <Modal
+        visible={showAddRideModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddRideModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Offer a Ride</Text>
+                <TouchableOpacity
+                  onPress={() => setShowAddRideModal(false)}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Pickup Location</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setShowPickupOptions(!showPickupOptions)}
+                >
+                  <Text style={styles.pickerButtonText}>
+                    {newRide.pickup || 'Select pickup location'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                {showPickupOptions && (
+                  <ScrollView style={styles.pickerOptions} nestedScrollEnabled>
+                    {locations.map((location) => (
+                      <TouchableOpacity
+                        key={location}
+                        style={styles.pickerOption}
+                        onPress={() => {
+                          handleNewRideChange('pickup', location);
+                          setShowPickupOptions(false);
+                        }}
+                      >
+                        <Text style={styles.pickerOptionText}>{location}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Dropoff Location</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setShowDropoffOptions(!showDropoffOptions)}
+                >
+                  <Text style={styles.pickerButtonText}>
+                    {newRide.dropoff || 'Select dropoff location'}
+                  </Text>
+                  <Text style={styles.pickerArrow}>▼</Text>
+                </TouchableOpacity>
+                {showDropoffOptions && (
+                  <ScrollView style={styles.pickerOptions} nestedScrollEnabled>
+                    {locations.map((location) => (
+                      <TouchableOpacity
+                        key={location}
+                        style={styles.pickerOption}
+                        onPress={() => {
+                          handleNewRideChange('dropoff', location);
+                          setShowDropoffOptions(false);
+                        }}
+                      >
+                        <Text style={styles.pickerOptionText}>{location}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+
+              {/* Date and Time */}
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.label}>Date *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor="#9ca3af"
+                    value={newRide.date}
+                    onChangeText={(value) => handleNewRideChange('date', value)}
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.label}>Time *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="HH:MM"
+                    placeholderTextColor="#9ca3af"
+                    value={newRide.time}
+                    onChangeText={(value) => handleNewRideChange('time', value)}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                  <Text style={styles.label}>Available Seats</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    value={newRide.seats}
+                    onChangeText={(text) => handleNewRideChange('seats', text)}
+                    keyboardType="numeric"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                  <Text style={styles.label}>Price per Seat ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0.00"
+                    value={newRide.price}
+                    onChangeText={(text) => handleNewRideChange('price', text)}
+                    keyboardType="decimal-pad"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+              </View>
+
+              {/* Description */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Description (Optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  placeholder="Add any additional details..."
+                  placeholderTextColor="#9ca3af"
+                  multiline
+                  numberOfLines={3}
+                  value={newRide.description}
+                  onChangeText={(value) => handleNewRideChange('description', value)}
+                />
+              </View>
+
+              {/* Submit Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => setShowAddRideModal(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.submitButton} onPress={handleAddRide}>
+                  <Text style={styles.submitButtonText}>Add Ride</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingBottom: 16,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  addButton: {
+    backgroundColor: '#000000',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+  },
+  searchContainer: {
+    backgroundColor: '#f7f7f7',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 44,
+    justifyContent: 'center',
+  },
+  searchInput: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#8e8e93',
+    textAlign: 'center',
+  },
+  rideCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
+  rideTopSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  rideMainInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  rideTime: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  routeInfo: {
+    gap: 8,
+  },
+  routePoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  pickupDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#000000',
+  },
+  dropoffDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#000000',
+  },
+  routeDivider: {
+    width: 2,
+    height: 12,
+    backgroundColor: '#d1d1d6',
+    marginLeft: 3,
+  },
+  locationText: {
+    fontSize: 15,
+    color: '#000000',
+    flex: 1,
+  },
+  priceSection: {
+    justifyContent: 'center',
+  },
+  priceText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  rideDivider: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 12,
+  },
+  rideBottomSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  driverSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  driverAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  driverAvatarText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  driverName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  seatsInfo: {
+    backgroundColor: '#f7f7f7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  seatsText: {
+    fontSize: 13,
+    color: '#000000',
+    fontWeight: '500',
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f7f7f7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#000000',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f7f7f7',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 14,
+    fontSize: 16,
+    color: '#000000',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+  },
+  pickerButton: {
+    backgroundColor: '#f7f7f7',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pickerButtonText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  pickerArrow: {
+    fontSize: 12,
+    color: '#8e8e93',
+  },
+  pickerOptions: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    marginTop: 8,
+    maxHeight: 200,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  pickerOption: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  pickerOptionText: {
+    fontSize: 16,
+    color: '#000000',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 24,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: '#f7f7f7',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: '#000000',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+});
