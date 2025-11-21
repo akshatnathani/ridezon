@@ -142,7 +142,7 @@ export default function RidesScreen() {
         locationName={userLocation ? 'Current Location' : undefined}
         locationLoading={locationLoading}
         onLocationPress={requestLocationPermission}
-        onProfilePress={() => router.push('/(tabs)/profile')}
+        onProfilePress={() => router.push('/profile')}
       />
 
       {/* Search Trigger */}
@@ -230,15 +230,6 @@ export default function RidesScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
         }
       />
-
-      {/* FAB */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => router.push('/create-ride' as any)}
-        activeOpacity={0.9}
-      >
-        <IconSymbol name="plus" size={32} color={theme.colors.white} />
-      </TouchableOpacity>
     </ScreenContainer>
   );
 }
@@ -278,17 +269,5 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: theme.spacing.base,
     marginBottom: theme.spacing.md,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: theme.spacing.xl,
-    right: theme.spacing.base,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...theme.shadows.lg,
   },
 });
