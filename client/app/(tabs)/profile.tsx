@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,61 +8,94 @@ import {
   Platform,
   StatusBar,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Ride {
-  id: string;
-  driverName: string;
-  pickup: string;
-  dropoff: string;
-  date: string;
-  time: string;
-  seats: number;
-  price: number;
-  description?: string;
-}
+import { theme } from '@/constants/theme';
+import { ScreenContainer, Card, SectionHeader, Divider, Badge, Button } from '@/components/ui/primitives';
+import { rideService } from '@/services/mock/rideService';
+import { Ride } from '@/types/ride';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const [myRides, setMyRides] = useState<Ride[]>([
-    {
-      id: '1',
-      driverName: 'You',
-      pickup: 'Downtown',
-      dropoff: 'Airport',
-      date: '2024-01-20',
-      time: '10:00 AM',
-      seats: 3,
-      price: 25,
-      description: 'Comfortable ride with AC',
-    },
-    {
-      id: '2',
-      driverName: 'You',
-      pickup: 'University',
-      dropoff: 'Mall',
-      date: '2024-01-20',
-      time: '2:30 PM',
-      seats: 2,
-      price: 15,
-    },
-  ]);
+  const router = useRouter();
+  const [myRides, setMyRides] = useState<Ride[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadMyRides = useCallback(async () => {
+    try {
+      // In a real app, we'd have a specific endpoint for "my rides"
+      // For mock, we'll fetch all and filter
+      const response = await rideService.getAvailableRides();
+      if (response.data) {
+        // Filter rides where current user is organizer or participant
+        // Mock logic: assuming 'user_current' is the ID
+        const filtered = response.data.filter(ride =>
+          ride.organizer_id === 'user_current' ||
+          ride.participants?.some(p => p.user_id === 'user_current')
+        );
+        setMyRides(filtered);
+      }
+    } catch (error) {
+      console.error('Error loading rides:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMyRides();
+  }, [loadMyRides]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadMyRides();
+  };
 
   const handleDeleteRide = (rideId: string) => {
     Alert.alert(
       'Delete Ride',
-      'Are you sure you want to delete this ride?',
+      'Are you sure you want to delete this ride? This cannot be undone.',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setMyRides(myRides.filter(ride => ride.id !== rideId));
+          onPress: async () => {
+            const response = await rideService.deleteRide(rideId);
+            if (response.error) {
+              Alert.alert('Error', response.error);
+            } else {
+              Alert.alert('Success', 'Ride deleted');
+              loadMyRides();
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLeaveRide = (rideId: string) => {
+    Alert.alert(
+      'Leave Ride',
+      'Are you sure you want to leave this ride?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            const response = await rideService.leaveRide(rideId);
+            if (response.error) {
+              Alert.alert('Error', response.error);
+            } else {
+              Alert.alert('Success', 'You left the ride');
+              loadMyRides();
+            }
           },
         },
       ]
@@ -74,337 +107,304 @@ export default function ProfileScreen() {
       'Sign Out',
       'Are you sure you want to sign out?',
       [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
             await signOut();
+            router.replace('/login');
           },
         },
       ]
     );
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+    <ScreenContainer backgroundColor={theme.colors.backgroundSecondary}>
+      <StatusBar barStyle="dark-content" />
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Profile Info */}
-        <View style={styles.profileSection}>
-          <View style={styles.avatarLarge}>
-            <Text style={styles.avatarLargeText}>
-              {user?.user_metadata?.full_name?.substring(0, 2).toUpperCase() || 
-               user?.email?.substring(0, 2).toUpperCase() || 'U'}
-            </Text>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
+        }
+      >
+        {/* Profile Info Card */}
+        <Card style={styles.profileCard}>
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarLarge}>
+              <Text style={styles.avatarLargeText}>
+                {user?.user_metadata?.full_name?.substring(0, 1).toUpperCase() || 'U'}
+              </Text>
+            </View>
+            <View style={styles.profileTexts}>
+              <Text style={styles.profileName}>
+                {user?.user_metadata?.full_name || 'User'}
+              </Text>
+              <Text style={styles.profileEmail}>{user?.email || 'No email'}</Text>
+              <View style={styles.ratingContainer}>
+                <IconSymbol name="star.fill" size={16} color="#F59E0B" />
+                <Text style={styles.ratingText}>4.8 (24 rides)</Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.profileName}>
-            {user?.user_metadata?.full_name || 'User'}
-          </Text>
-          <Text style={styles.profileEmail}>{user?.email || 'No email'}</Text>
-          
-          {user?.user_metadata?.phone_number && (
-            <Text style={styles.profilePhone}>{user.user_metadata.phone_number}</Text>
-          )}
-          
-          {user?.user_metadata?.age && user?.user_metadata?.gender && (
-            <Text style={styles.profileInfo}>
-              {user.user_metadata.age} • {user.user_metadata.gender}
-              {user.user_metadata.year_of_study && ` • ${user.user_metadata.year_of_study}`}
-            </Text>
-          )}
-          
-          <TouchableOpacity 
-            style={styles.signOutButton}
-            onPress={handleSignOut}
-          >
-            <Text style={styles.signOutButtonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
+        </Card>
 
-        {/* Stats */}
-        <View style={styles.statsSection}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{myRides.length}</Text>
-            <Text style={styles.statLabel}>Rides Offered</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>4.8</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>24</Text>
-            <Text style={styles.statLabel}>Trips</Text>
-          </View>
-        </View>
+        {/* Settings Section */}
+        <Card style={styles.sectionCard}>
+          <SectionHeader title="Settings" />
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconBox, { backgroundColor: '#E0F2FE' }]}>
+                <IconSymbol name="bell.fill" size={20} color="#0284C7" />
+              </View>
+              <Text style={styles.settingLabel}>Notifications</Text>
+            </View>
+            <IconSymbol name="chevron.right" size={20} color={theme.colors.gray400} />
+          </TouchableOpacity>
+          <Divider />
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconBox, { backgroundColor: '#DCFCE7' }]}>
+                <IconSymbol name="shield.fill" size={20} color="#16A34A" />
+              </View>
+              <Text style={styles.settingLabel}>Privacy & Security</Text>
+            </View>
+            <IconSymbol name="chevron.right" size={20} color={theme.colors.gray400} />
+          </TouchableOpacity>
+          <Divider />
+          <TouchableOpacity style={styles.settingRow}>
+            <View style={styles.settingLeft}>
+              <View style={[styles.settingIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <IconSymbol name="creditcard.fill" size={20} color="#D97706" />
+              </View>
+              <Text style={styles.settingLabel}>Payments</Text>
+            </View>
+            <IconSymbol name="chevron.right" size={20} color={theme.colors.gray400} />
+          </TouchableOpacity>
+        </Card>
 
         {/* My Rides Section */}
-        <View style={styles.myRidesSection}>
-          <Text style={styles.sectionTitle}>My Rides</Text>
-          
-          {myRides.length === 0 ? (
+        <Text style={styles.sectionTitle}>My Rides</Text>
+        {myRides.length === 0 ? (
+          <Card>
             <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>🚗</Text>
               <Text style={styles.emptyStateText}>No rides yet</Text>
-              <Text style={styles.emptyStateSubtext}>Start offering rides to help others</Text>
+              <Text style={styles.emptyStateSubtext}>Your planned and joined rides will appear here</Text>
             </View>
-          ) : (
-            myRides.map((ride) => (
-              <View key={ride.id} style={styles.rideCard}>
-                <View style={styles.rideTopSection}>
-                  <View style={styles.rideMainInfo}>
-                    <Text style={styles.rideTime}>{ride.time}</Text>
-                    <Text style={styles.rideDate}>{ride.date}</Text>
-                    <View style={styles.routeInfo}>
-                      <View style={styles.routePoint}>
-                        <View style={styles.pickupDot} />
-                        <Text style={styles.locationText} numberOfLines={1}>{ride.pickup}</Text>
-                      </View>
-                      <View style={styles.routeDivider} />
-                      <View style={styles.routePoint}>
-                        <View style={styles.dropoffDot} />
-                        <Text style={styles.locationText} numberOfLines={1}>{ride.dropoff}</Text>
-                      </View>
-                    </View>
+          </Card>
+        ) : (
+          myRides.map((ride) => {
+            const isOrganizer = ride.organizer_id === 'user_current'; // Mock check
+            return (
+              <Card key={ride.id} style={styles.rideCard}>
+                <View style={styles.rideHeader}>
+                  <View>
+                    <Text style={styles.rideDate}>{formatDate(ride.scheduled_start_time)}</Text>
+                    <Text style={styles.rideRoute} numberOfLines={1}>
+                      {ride.start_location_name} → {ride.destination_name}
+                    </Text>
                   </View>
-                  <View style={styles.priceSection}>
-                    <Text style={styles.priceText}>${ride.price}</Text>
-                    <Text style={styles.seatsText}>{ride.seats} seats</Text>
-                  </View>
+                  <Badge
+                    text={isOrganizer ? 'Organizer' : 'Passenger'}
+                    variant={isOrganizer ? 'success' : 'info'}
+                    size="sm"
+                  />
                 </View>
 
-                {ride.description && (
-                  <Text style={styles.rideDescription}>{ride.description}</Text>
-                )}
+                <Divider spacing="sm" />
 
-                <TouchableOpacity 
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteRide(ride.id)}
-                >
-                  <Text style={styles.deleteButtonText}>Delete Ride</Text>
-                </TouchableOpacity>
-              </View>
-            ))
-          )}
-        </View>
+                <View style={styles.rideActions}>
+                  <Button
+                    title="View Details"
+                    variant="outline"
+                    size="sm"
+                    onPress={() => router.push(`/ride-details/${ride.id}` as any)}
+                  />
+                  {isOrganizer ? (
+                    <Button
+                      title="Delete"
+                      variant="danger"
+                      size="sm"
+                      onPress={() => handleDeleteRide(ride.id)}
+                    />
+                  ) : (
+                    <Button
+                      title="Leave"
+                      variant="ghost"
+                      size="sm"
+                      onPress={() => handleLeaveRide(ride.id)}
+                      style={{ backgroundColor: theme.colors.gray100 }}
+                    />
+                  )}
+                </View>
+              </Card>
+            );
+          })
+        )}
+
+        <Button
+          title="Sign Out"
+          variant="secondary"
+          onPress={handleSignOut}
+          style={styles.signOutButton}
+        />
+
+        <View style={styles.bottomSpacer} />
       </ScrollView>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingHorizontal: theme.spacing.base,
+    paddingTop: Platform.OS === 'ios' ? theme.spacing.xl : theme.spacing.lg,
+    paddingBottom: theme.spacing.base,
+    backgroundColor: theme.colors.backgroundSecondary,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000000',
+    ...theme.typography.headingXL,
+    color: theme.colors.textPrimary,
   },
-  profileSection: {
+  scrollContent: {
+    padding: theme.spacing.base,
+  },
+  profileCard: {
+    marginBottom: theme.spacing.lg,
+  },
+  profileHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   avatarLarge: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#000000',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginRight: theme.spacing.md,
   },
   avatarLargeText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#ffffff',
+    ...theme.typography.headingL,
+    color: theme.colors.white,
+  },
+  profileTexts: {
+    flex: 1,
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
+    ...theme.typography.headingM,
+    color: theme.colors.textPrimary,
+    marginBottom: 2,
   },
   profileEmail: {
-    fontSize: 16,
-    color: '#8e8e93',
+    ...theme.typography.bodyS,
+    color: theme.colors.textSecondary,
     marginBottom: 4,
   },
-  profilePhone: {
-    fontSize: 16,
-    color: '#8e8e93',
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  profileInfo: {
-    fontSize: 15,
-    color: '#8e8e93',
-    marginTop: 4,
-  },
-  signOutButton: {
-    marginTop: 16,
-    backgroundColor: '#000000',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 25,
-  },
-  signOutButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
+  ratingText: {
+    ...theme.typography.captionM,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
-  statsSection: {
+  sectionCard: {
+    marginBottom: theme.spacing.xl,
+  },
+  settingRow: {
     flexDirection: 'row',
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  statBox: {
-    flex: 1,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#8e8e93',
+  settingIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#f0f0f0',
-  },
-  myRidesSection: {
-    padding: 16,
+  settingLabel: {
+    ...theme.typography.bodyM,
+    color: theme.colors.textPrimary,
+    fontWeight: '500',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 16,
+    ...theme.typography.headingL,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  rideCard: {
+    marginBottom: theme.spacing.md,
+  },
+  rideHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  rideDate: {
+    ...theme.typography.captionM,
+    color: theme.colors.textSecondary,
+    marginBottom: 2,
+  },
+  rideRoute: {
+    ...theme.typography.bodyM,
+    color: theme.colors.textPrimary,
+    fontWeight: '600',
+    maxWidth: 200,
+  },
+  rideActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: theme.spacing.sm,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: theme.spacing.xl,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    marginBottom: theme.spacing.md,
   },
   emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 8,
+    ...theme.typography.headingS,
+    color: theme.colors.textPrimary,
+    marginBottom: 4,
   },
   emptyStateSubtext: {
-    fontSize: 14,
-    color: '#8e8e93',
-    textAlign: 'center',
+    ...theme.typography.bodyS,
+    color: theme.colors.textSecondary,
   },
-  rideCard: {
-    backgroundColor: '#f7f7f7',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
+  signOutButton: {
+    marginTop: theme.spacing.xl,
   },
-  rideTopSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  rideMainInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  rideTime: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  rideDate: {
-    fontSize: 14,
-    color: '#8e8e93',
-    marginBottom: 12,
-  },
-  routeInfo: {
-    gap: 6,
-  },
-  routePoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  pickupDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#000000',
-  },
-  dropoffDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#000000',
-  },
-  routeDivider: {
-    width: 2,
-    height: 10,
-    backgroundColor: '#d1d1d6',
-    marginLeft: 3,
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#000000',
-    flex: 1,
-  },
-  priceSection: {
-    alignItems: 'flex-end',
-  },
-  priceText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 4,
-  },
-  seatsText: {
-    fontSize: 13,
-    color: '#8e8e93',
-  },
-  rideDescription: {
-    fontSize: 14,
-    color: '#8e8e93',
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  deleteButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  deleteButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
+  bottomSpacer: {
+    height: 40,
   },
 });

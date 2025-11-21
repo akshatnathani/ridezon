@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { theme } from '../constants/theme';
 
 interface Participant {
   id: string;
@@ -111,7 +112,7 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
           totalCustom += customAmount;
         });
         if (Math.abs(totalCustom - totalAmount) > 0.01) {
-          Alert.alert('Invalid Split', `Split amounts must total $${totalAmount.toFixed(2)}`);
+          Alert.alert('Invalid Split', `Split amounts must total ₹${totalAmount.toFixed(2)}`);
           return null;
         }
         break;
@@ -189,7 +190,7 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
       <View style={styles.inputGroup}>
         <Text style={styles.inputLabel}>Amount *</Text>
         <View style={styles.amountInput}>
-          <Text style={styles.currencySymbol}>$</Text>
+          <Text style={styles.currencySymbol}>₹</Text>
           <TextInput
             style={styles.amountField}
             placeholder="0.00"
@@ -253,7 +254,7 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
         </TouchableOpacity>
 
         <Text style={styles.modalTitle}>Split Expense</Text>
-        <Text style={styles.modalSubtitle}>Total: ${totalAmount.toFixed(2)}</Text>
+        <Text style={styles.modalSubtitle}>Total: ₹{totalAmount.toFixed(2)}</Text>
 
         {/* Split Type */}
         <View style={styles.inputGroup}>
@@ -352,7 +353,7 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
                     )}
                     {(splitType === 'unequal' || splitType === 'custom') && (
                       <View style={styles.customInputContainer}>
-                        <Text style={styles.customInputUnit}>$</Text>
+                        <Text style={styles.customInputUnit}>₹</Text>
                         <TextInput
                           style={styles.customInput}
                           placeholder="0.00"
@@ -364,14 +365,14 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
                       </View>
                     )}
                     <Text style={styles.sharePreview}>
-                      ${shareAmount.toFixed(2)}
+                      ₹{shareAmount.toFixed(2)}
                     </Text>
                   </View>
                 )}
 
                 {isSelected && splitType === 'equal' && (
                   <Text style={styles.shareAmount}>
-                    ${shareAmount.toFixed(2)}
+                    ₹{shareAmount.toFixed(2)}
                   </Text>
                 )}
               </View>
@@ -385,7 +386,7 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
             <Text style={styles.summaryLabel}>Selected: {selectedParticipants.length} people</Text>
             {splitType === 'equal' && (
               <Text style={styles.summaryValue}>
-                ${(totalAmount / selectedParticipants.length).toFixed(2)} each
+                ₹{(totalAmount / selectedParticipants.length).toFixed(2)} each
               </Text>
             )}
           </View>
@@ -433,72 +434,71 @@ export default function AddExpenseModal({ visible, onClose, onSave, participants
 const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme.colors.background,
   },
   modalContent: {
     flex: 1,
-    padding: 20,
+    padding: theme.spacing.lg,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
   },
   backButtonModal: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   backTextModal: {
-    fontSize: 17,
-    color: '#000000',
+    ...theme.typography.bodyLarge,
+    color: theme.colors.text,
     fontWeight: '500',
   },
   modalTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
+    ...theme.typography.heading1,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   modalSubtitle: {
-    fontSize: 17,
-    color: '#8e8e93',
-    marginBottom: 24,
+    ...theme.typography.bodyLarge,
+    color: theme.colors.textSecondary,
+    marginBottom: theme.spacing.xl,
   },
   inputGroup: {
-    marginBottom: 24,
+    marginBottom: theme.spacing.xl,
   },
   inputLabel: {
-    fontSize: 15,
+    ...theme.typography.body,
     fontWeight: '600',
-    color: '#000000',
-    marginBottom: 12,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
   },
   input: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 17,
-    color: '#000000',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    ...theme.typography.bodyLarge,
+    color: theme.colors.text,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   amountInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.lg,
+    paddingHorizontal: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   currencySymbol: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#000000',
-    marginRight: 8,
+    color: theme.colors.text,
+    marginRight: theme.spacing.xs,
   },
   amountField: {
     flex: 1,
     fontSize: 24,
     fontWeight: '600',
-    color: '#000000',
-    paddingVertical: 14,
+    color: theme.colors.text,
+    paddingVertical: theme.spacing.sm,
   },
   categoryScroll: {
     flexDirection: 'row',
@@ -506,44 +506,44 @@ const styles = StyleSheet.create({
   categoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginRight: 8,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.radius.xl,
+    marginRight: theme.spacing.xs,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   categoryChipActive: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   categoryIcon: {
     fontSize: 18,
-    marginRight: 6,
+    marginRight: theme.spacing.xs,
   },
   categoryLabel: {
-    fontSize: 15,
-    color: '#000000',
+    ...theme.typography.body,
+    color: theme.colors.text,
     fontWeight: '500',
   },
   categoryLabelActive: {
-    color: '#ffffff',
+    color: theme.colors.surface,
   },
   paidByContainer: {
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   paidByOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.lg,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   paidByOptionActive: {
-    borderColor: '#000000',
+    borderColor: theme.colors.text,
     borderWidth: 2,
   },
   radioOuter: {
@@ -554,20 +554,20 @@ const styles = StyleSheet.create({
     borderColor: '#d1d1d6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.sm,
   },
   radioOuterActive: {
-    borderColor: '#000000',
+    borderColor: theme.colors.text,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#000000',
+    backgroundColor: theme.colors.text,
   },
   paidByText: {
-    fontSize: 17,
-    color: '#000000',
+    ...theme.typography.bodyLarge,
+    color: theme.colors.text,
   },
   paidByTextActive: {
     fontWeight: '600',
@@ -575,41 +575,41 @@ const styles = StyleSheet.create({
   splitTypeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: theme.spacing.xs,
   },
   splitTypeButton: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#ffffff',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radius.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   splitTypeButtonActive: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   splitTypeText: {
-    fontSize: 15,
+    ...theme.typography.body,
     fontWeight: '500',
-    color: '#000000',
+    color: theme.colors.text,
   },
   splitTypeTextActive: {
-    color: '#ffffff',
+    color: theme.colors.surface,
   },
   participantRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+    marginBottom: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#e5e5e5',
+    borderColor: theme.colors.border,
   },
   participantLeft: {
     flexDirection: 'row',
@@ -624,60 +624,60 @@ const styles = StyleSheet.create({
     borderColor: '#d1d1d6',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.sm,
   },
   checkboxActive: {
-    backgroundColor: '#000000',
-    borderColor: '#000000',
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   checkmark: {
     fontSize: 14,
-    color: '#ffffff',
+    color: theme.colors.surface,
     fontWeight: '700',
   },
   participantName: {
-    fontSize: 17,
-    color: '#000000',
+    ...theme.typography.bodyLarge,
+    color: theme.colors.text,
   },
   participantRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: theme.spacing.sm,
   },
   customInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f7f7f7',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.sm,
   },
   customInput: {
-    fontSize: 17,
-    color: '#000000',
-    paddingVertical: 8,
+    ...theme.typography.bodyLarge,
+    color: theme.colors.text,
+    paddingVertical: theme.spacing.xs,
     minWidth: 60,
     textAlign: 'center',
   },
   customInputUnit: {
-    fontSize: 15,
-    color: '#8e8e93',
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
     fontWeight: '600',
   },
   sharePreview: {
-    fontSize: 15,
-    color: '#34c759',
+    ...theme.typography.body,
+    color: theme.colors.success,
     fontWeight: '600',
   },
   shareAmount: {
-    fontSize: 16,
+    ...theme.typography.bodyMedium,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.colors.text,
   },
   splitSummary: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.md,
+    borderRadius: theme.radius.lg,
+    marginTop: theme.spacing.xs,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -685,57 +685,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 15,
-    color: '#8e8e93',
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
   },
   summaryValue: {
-    fontSize: 17,
+    ...theme.typography.bodyLarge,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.colors.text,
   },
   modalFooter: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    backgroundColor: '#ffffff',
+    padding: theme.spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? 40 : theme.spacing.lg,
+    backgroundColor: theme.colors.surface,
     borderTopWidth: 1,
-    borderTopColor: '#e5e5e5',
-    gap: 12,
+    borderTopColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
-    backgroundColor: '#f7f7f7',
+    backgroundColor: theme.colors.background,
   },
   cancelButtonText: {
-    fontSize: 17,
+    ...theme.typography.bodyLarge,
     fontWeight: '600',
-    color: '#000000',
+    color: theme.colors.text,
   },
   nextButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
-    backgroundColor: '#000000',
+    backgroundColor: theme.colors.text,
   },
   nextButtonText: {
-    fontSize: 17,
+    ...theme.typography.bodyLarge,
     fontWeight: '600',
-    color: '#ffffff',
+    color: theme.colors.surface,
   },
   saveButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.radius.lg,
     alignItems: 'center',
-    backgroundColor: '#34c759',
+    backgroundColor: theme.colors.success,
   },
   saveButtonText: {
-    fontSize: 17,
+    ...theme.typography.bodyLarge,
     fontWeight: '600',
-    color: '#ffffff',
+    color: theme.colors.surface,
   },
 });

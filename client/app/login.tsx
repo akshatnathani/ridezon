@@ -2,16 +2,19 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Platform,
   StatusBar,
   Alert,
+  Image,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
+import { theme } from '@/constants/theme';
+import { ScreenContainer, Button } from '@/components/ui/primitives';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,238 +27,132 @@ export default function LoginScreen() {
     path: 'auth/callback',
   });
 
-  console.log('Redirect URL:', redirectUrl);
-
   const handleGoogleSignIn = async () => {
     // TODO: Implement Google OAuth later
     // Temporarily bypass authentication for development
     setLoading(true);
-    
+
     // Simulate loading
     setTimeout(() => {
       setLoading(false);
       router.replace('/(tabs)' as any);
     }, 1000);
-
-    /* COMMENTED OUT - Google OAuth Implementation
-    try {
-      setLoading(true);
-
-      console.log('Starting OAuth with redirect:', redirectUrl);
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account',
-          },
-        },
-      });
-
-      if (error) {
-        Alert.alert('Error', error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUrl
-        );
-
-        if (result.type === 'success' && result.url) {
-          // Parse the URL to get tokens
-          const url = result.url;
-          let params: URLSearchParams;
-          
-          // Check if tokens are in hash or query
-          if (url.includes('#')) {
-            params = new URLSearchParams(url.split('#')[1]);
-          } else if (url.includes('?')) {
-            params = new URLSearchParams(url.split('?')[1]);
-          } else {
-            throw new Error('No authentication parameters found');
-          }
-
-          const access_token = params.get('access_token');
-          const refresh_token = params.get('refresh_token');
-          
-          if (access_token && refresh_token) {
-            const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-
-            if (sessionError) {
-              throw sessionError;
-            }
-
-            // Verify email domain
-            if (session?.user?.email) {
-              if (!session.user.email.endsWith('.edu')) {
-                await supabase.auth.signOut();
-                Alert.alert(
-                  'Invalid Email Domain',
-                  'Only .edu email addresses are allowed. Please sign in with your university email.',
-                  [{ text: 'OK' }]
-                );
-                setLoading(false);
-                return;
-              }
-
-              // Success - navigate to callback which will check profile completion
-              router.replace('/auth/callback');
-            }
-          } else {
-            throw new Error('Authentication tokens not received');
-          }
-        } else if (result.type === 'cancel') {
-          Alert.alert('Cancelled', 'Sign in was cancelled');
-          setLoading(false);
-        }
-      }
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      Alert.alert('Sign In Error', error.message || 'An error occurred during sign in');
-      setLoading(false);
-    } finally {
-      setLoading(false);
-    }
-    */
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+    <ScreenContainer backgroundColor={theme.colors.white}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.white} />
+
       <View style={styles.content}>
-        <View style={styles.logoContainer}>
+        {/* Top Section: Logo & Branding */}
+        <View style={styles.logoSection}>
           <View style={styles.logoCircle}>
             <Text style={styles.logoText}>R</Text>
           </View>
           <Text style={styles.appName}>Ridezon</Text>
-          <Text style={styles.tagline}>Student Ride Sharing</Text>
+          <Text style={styles.tagline}>Campus rides, simplified.</Text>
         </View>
 
-        <View style={styles.bottomSection}>
-          <Text style={styles.welcomeText}>Welcome</Text>
-          <Text style={styles.subtitleText}>
-            Sign in with your .edu email to continue
-          </Text>
-
-          <TouchableOpacity
-            style={[styles.signInButton, loading && styles.signInButtonDisabled]}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.signInButtonText}>
-              {loading ? 'Signing in...' : 'Continue with Google'}
+        {/* Bottom Section: Actions */}
+        <View style={styles.actionSection}>
+          <View style={styles.welcomeContainer}>
+            <Text style={styles.welcomeTitle}>Let's get started</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Join your university community to find safe and affordable rides.
             </Text>
-          </TouchableOpacity>
+          </View>
+
+          <Button
+            title={loading ? 'Signing in...' : 'Continue with Google'}
+            onPress={handleGoogleSignIn}
+            variant="primary"
+            size="lg"
+            fullWidth
+            isLoading={loading}
+            leftIcon={<IconSymbol name="g.circle.fill" size={20} color={theme.colors.white} />}
+            style={styles.googleButton}
+          />
 
           <Text style={styles.footerText}>
-            Only .edu email addresses are accepted
+            Only <Text style={styles.highlight}>.edu</Text> email addresses are accepted to ensure community safety.
           </Text>
         </View>
       </View>
-    </View>
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
   content: {
     flex: 1,
-    paddingHorizontal: 32,
-    paddingTop: Platform.OS === 'ios' ? 80 : 60,
-    paddingBottom: 40,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
   },
-  logoContainer: {
+  logoSection: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: theme.spacing.xxxl,
   },
   logoCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#000000',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.lg,
   },
   logoText: {
-    fontSize: 64,
-    fontWeight: '700',
-    color: '#ffffff',
+    fontSize: 56,
+    fontWeight: '800',
+    color: theme.colors.white,
+    marginTop: 4, // Optical adjustment
   },
   appName: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    ...theme.typography.headingXL,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
   tagline: {
-    fontSize: 16,
-    color: '#8e8e93',
-    fontWeight: '500',
+    ...theme.typography.bodyL,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
   },
-  bottomSection: {
-    paddingBottom: 20,
+  actionSection: {
+    width: '100%',
+    paddingBottom: theme.spacing.xl,
   },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#000000',
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  subtitleText: {
-    fontSize: 16,
-    color: '#8e8e93',
-    marginBottom: 32,
-    lineHeight: 22,
-  },
-  signInButton: {
-    backgroundColor: '#000000',
-    paddingVertical: 16,
-    borderRadius: 12,
+  welcomeContainer: {
+    marginBottom: theme.spacing.xl,
     alignItems: 'center',
-    marginBottom: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
   },
-  signInButtonDisabled: {
-    opacity: 0.6,
+  welcomeTitle: {
+    ...theme.typography.headingL,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.xs,
   },
-  signInButtonText: {
-    color: '#ffffff',
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.2,
+  welcomeSubtitle: {
+    ...theme.typography.bodyM,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: theme.spacing.lg,
+  },
+  googleButton: {
+    marginBottom: theme.spacing.lg,
   },
   footerText: {
-    fontSize: 13,
-    color: '#8e8e93',
+    ...theme.typography.captionM,
+    color: theme.colors.textTertiary,
     textAlign: 'center',
     lineHeight: 18,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  highlight: {
+    color: theme.colors.primary,
+    fontWeight: '600',
   },
 });

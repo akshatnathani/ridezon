@@ -8,51 +8,52 @@ import { Platform } from 'react-native';
 export const theme = {
   // Color palette
   colors: {
-    // Primary
-    primary: '#00C46A',
-    primaryDark: '#00A657',
-    primaryLight: '#E6F9F1',
-    
-    // Neutrals
-    black: '#050505',
-    gray900: '#111827',
-    gray700: '#374151',
-    gray600: '#4B5563',
-    gray500: '#6B7280',
-    gray400: '#9CA3AF',
-    gray300: '#D1D5DB',
-    gray200: '#E5E7EB',
-    gray100: '#F3F4F6',
-    gray50: '#F9FAFB',
+    // Primary - A more sophisticated green
+    primary: '#00B359', // Slightly darker, more premium green
+    primaryDark: '#008F47',
+    primaryLight: '#E0F7EB',
+
+    // Neutrals - Warmer grays for a polished look
+    black: '#1A1A1A', // Soft black
+    gray900: '#1F2937',
+    gray800: '#374151',
+    gray700: '#4B5563',
+    gray600: '#6B7280',
+    gray500: '#9CA3AF',
+    gray400: '#D1D5DB',
+    gray300: '#E5E7EB',
+    gray200: '#F3F4F6',
+    gray100: '#F9FAFB',
+    gray50: '#FCFCFD',
     white: '#FFFFFF',
-    
+
     // Semantic
-    success: '#00C46A',
+    success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
     info: '#3B82F6',
-    
+
     // Backgrounds
     background: '#FFFFFF',
     backgroundSecondary: '#F9FAFB',
     surface: '#FFFFFF',
     surfaceElevated: '#FFFFFF',
-    
+
     // Borders
     border: '#E5E7EB',
     borderLight: '#F3F4F6',
-    
+
     // Text
     textPrimary: '#111827',
     textSecondary: '#4B5563',
     textTertiary: '#9CA3AF',
     textInverse: '#FFFFFF',
-    
+
     // Overlays
     overlay: 'rgba(0, 0, 0, 0.5)',
     overlayLight: 'rgba(0, 0, 0, 0.25)',
   },
-  
+
   // Spacing scale (4px base)
   spacing: {
     xs: 4,
@@ -65,7 +66,7 @@ export const theme = {
     xxxl: 40,
     xxxxl: 48,
   },
-  
+
   // Border radius
   radius: {
     xs: 4,
@@ -76,35 +77,36 @@ export const theme = {
     xxl: 24,
     full: 9999,
   },
-  
+
   // Typography
   typography: {
     // Heading XL (screen titles)
     headingXL: {
-      fontSize: 28,
-      lineHeight: 36,
-      fontWeight: '600' as const,
-      letterSpacing: -0.5,
+      fontSize: 32,
+      lineHeight: 40,
+      fontWeight: '700' as const,
+      letterSpacing: -0.8,
     },
     // Heading L (section titles)
     headingL: {
-      fontSize: 22,
+      fontSize: 24,
+      lineHeight: 32,
+      fontWeight: '600' as const,
+      letterSpacing: -0.5,
+    },
+    // Heading M
+    headingM: {
+      fontSize: 20,
       lineHeight: 28,
       fontWeight: '600' as const,
       letterSpacing: -0.3,
     },
-    // Heading M
-    headingM: {
-      fontSize: 18,
-      lineHeight: 24,
-      fontWeight: '600' as const,
-      letterSpacing: -0.2,
-    },
     // Heading S
     headingS: {
       fontSize: 16,
-      lineHeight: 22,
+      lineHeight: 24,
       fontWeight: '600' as const,
+      letterSpacing: -0.2,
     },
     // Body L
     bodyL: {
@@ -128,25 +130,26 @@ export const theme = {
     captionL: {
       fontSize: 13,
       lineHeight: 18,
-      fontWeight: '400' as const,
+      fontWeight: '500' as const,
     },
     // Caption M
     captionM: {
       fontSize: 12,
       lineHeight: 16,
-      fontWeight: '400' as const,
+      fontWeight: '500' as const,
     },
     // Caption S
     captionS: {
       fontSize: 11,
       lineHeight: 14,
-      fontWeight: '400' as const,
+      fontWeight: '500' as const,
     },
     // Button text
     button: {
       fontSize: 16,
       lineHeight: 24,
       fontWeight: '600' as const,
+      letterSpacing: -0.1,
     },
     buttonSmall: {
       fontSize: 14,
@@ -154,8 +157,8 @@ export const theme = {
       fontWeight: '600' as const,
     },
   },
-  
-  // Shadows
+
+  // Shadows - iOS and Android compatible
   shadows: {
     none: {
       shadowColor: 'transparent',
@@ -168,32 +171,32 @@ export const theme = {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 1,
+      shadowRadius: 3,
+      elevation: 2,
     },
     md: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 2,
-    },
-    lg: {
-      shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
+      shadowOpacity: 0.08,
       shadowRadius: 8,
       elevation: 4,
     },
-    xl: {
+    lg: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.12,
       shadowRadius: 16,
       elevation: 8,
     },
+    xl: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      elevation: 12,
+    },
   },
-  
+
   // Icon sizes
   iconSize: {
     xs: 12,
@@ -203,15 +206,15 @@ export const theme = {
     xl: 32,
     xxl: 40,
   },
-  
+
   // Button heights
   buttonHeight: {
     sm: 36,
-    md: 44,
-    lg: 52,
-    xl: 56,
+    md: 48, // Taller touch targets
+    lg: 56,
+    xl: 64,
   },
-  
+
   // Input heights
   inputHeight: {
     sm: 40,

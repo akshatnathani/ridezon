@@ -14,6 +14,7 @@ import {
   TextStyle,
   TouchableOpacityProps,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '@/constants/theme';
@@ -27,7 +28,7 @@ interface ScreenContainerProps {
 
 export const ScreenContainer: React.FC<ScreenContainerProps> = ({
   children,
-  backgroundColor = theme.colors.background,
+  backgroundColor = theme.colors.backgroundSecondary, // Default to secondary for better contrast with cards
   edges = ['top', 'bottom'],
 }) => {
   return (
@@ -40,7 +41,7 @@ export const ScreenContainer: React.FC<ScreenContainerProps> = ({
 // ============= BUTTONS =============
 interface ButtonProps extends TouchableOpacityProps {
   title: string;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
@@ -62,8 +63,8 @@ export const Button: React.FC<ButtonProps> = ({
 }) => {
   const buttonStyle = [
     styles.button,
-    styles[`button${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles],
-    styles[`button${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles],
+    styles[`button${size.charAt(0).toUpperCase() + size.slice(1)}` as keyof typeof styles] as ViewStyle,
+    styles[`button${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles] as ViewStyle,
     fullWidth && styles.buttonFullWidth,
     disabled && styles.buttonDisabled,
     style,
@@ -79,12 +80,12 @@ export const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       style={buttonStyle}
       disabled={disabled || isLoading}
-      activeOpacity={0.7}
+      activeOpacity={0.8}
       {...props}
     >
       {isLoading ? (
         <ActivityIndicator
-          color={variant === 'primary' ? theme.colors.white : theme.colors.primary}
+          color={variant === 'primary' || variant === 'danger' ? theme.colors.white : theme.colors.primary}
         />
       ) : (
         <>
@@ -103,23 +104,27 @@ interface CardProps {
   style?: ViewStyle;
   onPress?: () => void;
   shadow?: 'none' | 'sm' | 'md' | 'lg';
+  variant?: 'elevated' | 'outlined' | 'flat';
 }
 
 export const Card: React.FC<CardProps> = ({
   children,
   style,
   onPress,
-  shadow = 'md',
+  shadow = 'sm',
+  variant = 'elevated',
 }) => {
   const cardStyle = [
     styles.card,
-    theme.shadows[shadow],
+    variant === 'elevated' && theme.shadows[shadow],
+    variant === 'outlined' && styles.cardOutlined,
+    variant === 'flat' && styles.cardFlat,
     style,
   ];
 
   if (onPress) {
     return (
-      <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity style={cardStyle} onPress={onPress} activeOpacity={0.9}>
         {children}
       </TouchableOpacity>
     );
@@ -140,19 +145,22 @@ export const Badge: React.FC<BadgeProps> = ({
   variant = 'neutral',
   size = 'md',
 }) => {
+  const variantKey = `badge${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles;
+  const textVariantKey = `badgeText${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles;
+
   return (
     <View
       style={[
         styles.badge,
         size === 'sm' && styles.badgeSm,
-        styles[`badge${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles],
+        styles[variantKey] as ViewStyle,
       ]}
     >
       <Text
         style={[
           styles.badgeText,
           size === 'sm' && styles.badgeTextSm,
-          styles[`badgeText${variant.charAt(0).toUpperCase() + variant.slice(1)}` as keyof typeof styles],
+          styles[textVariantKey] as TextStyle,
         ]}
       >
         {text}
@@ -196,15 +204,17 @@ interface SectionHeaderProps {
     label: string;
     onPress: () => void;
   };
+  style?: ViewStyle;
 }
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({
   title,
   subtitle,
   rightAction,
+  style,
 }) => {
   return (
-    <View style={styles.sectionHeader}>
+    <View style={[styles.sectionHeader, style]}>
       <View style={styles.sectionHeaderLeft}>
         <Text style={styles.sectionHeaderTitle}>{title}</Text>
         {subtitle && <Text style={styles.sectionHeaderSubtitle}>{subtitle}</Text>}
@@ -218,7 +228,6 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   );
 };
 
-// ============= EMPTY STATE =============
 interface EmptyStateProps {
   icon: React.ReactNode;
   title: string;
@@ -244,7 +253,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Button
           title={action.label}
           onPress={action.onPress}
-          variant="secondary"
+          variant="primary"
           size="md"
           style={styles.emptyStateButton}
         />
@@ -253,7 +262,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   );
 };
 
-// ============= DIVIDER =============
 interface DividerProps {
   spacing?: 'sm' | 'md' | 'lg';
 }
@@ -270,7 +278,6 @@ export const Divider: React.FC<DividerProps> = ({ spacing = 'md' }) => {
   );
 };
 
-// ============= BOTTOM ACTION BAR =============
 interface BottomActionBarProps {
   children: React.ReactNode;
   backgroundColor?: string;
@@ -287,7 +294,6 @@ export const BottomActionBar: React.FC<BottomActionBarProps> = ({
   );
 };
 
-// ============= STYLES =============
 const styles = StyleSheet.create({
   // Screen Container
   screenContainer: {
@@ -299,7 +305,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: theme.radius.md,
+    borderRadius: theme.radius.full, // More modern rounded buttons
     paddingHorizontal: theme.spacing.xl,
   },
   buttonSm: {
@@ -331,16 +337,23 @@ const styles = StyleSheet.create({
   // Button Variants
   buttonPrimary: {
     backgroundColor: theme.colors.primary,
+    ...theme.shadows.sm,
   },
   buttonTextPrimary: {
     color: theme.colors.white,
   },
   buttonSecondary: {
-    backgroundColor: theme.colors.gray100,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.primaryLight,
   },
   buttonTextSecondary: {
+    color: theme.colors.primaryDark,
+  },
+  buttonOutline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: theme.colors.gray300,
+  },
+  buttonTextOutline: {
     color: theme.colors.textPrimary,
   },
   buttonGhost: {
@@ -362,15 +375,23 @@ const styles = StyleSheet.create({
   // Card
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.lg,
+    borderRadius: theme.radius.xl, // Larger radius for modern feel
     padding: theme.spacing.base,
+  },
+  cardOutlined: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  cardFlat: {
+    backgroundColor: theme.colors.gray50,
   },
 
   // Badge
   badge: {
     paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.radius.full,
+    paddingVertical: 4,
+    borderRadius: theme.radius.sm, // Slightly squarer badges
     alignSelf: 'flex-start',
   },
   badgeSm: {
@@ -382,19 +403,19 @@ const styles = StyleSheet.create({
   },
   badgeTextSuccess: {
     ...theme.typography.captionM,
-    color: theme.colors.primary,
+    color: theme.colors.primaryDark,
     fontWeight: '600',
   },
   badgeWarning: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#FFFBEB',
   },
   badgeTextWarning: {
     ...theme.typography.captionM,
-    color: '#D97706',
+    color: '#B45309',
     fontWeight: '600',
   },
   badgeError: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
   },
   badgeTextError: {
     ...theme.typography.captionM,
@@ -402,7 +423,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   badgeInfo: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#EFF6FF',
   },
   badgeTextInfo: {
     ...theme.typography.captionM,
@@ -429,15 +450,16 @@ const styles = StyleSheet.create({
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radius.full,
-    backgroundColor: theme.colors.gray100,
+    backgroundColor: theme.colors.white,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: theme.colors.gray200,
+    ...theme.shadows.sm,
   },
   tagSelected: {
-    backgroundColor: theme.colors.primaryLight,
+    backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
   tagIcon: {
@@ -446,9 +468,10 @@ const styles = StyleSheet.create({
   tagText: {
     ...theme.typography.bodyS,
     color: theme.colors.textSecondary,
+    fontWeight: '500',
   },
   tagTextSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.white,
     fontWeight: '600',
   },
 
@@ -456,20 +479,20 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.md,
+    alignItems: 'flex-end',
+    marginBottom: theme.spacing.lg,
   },
   sectionHeaderLeft: {
     flex: 1,
   },
   sectionHeaderTitle: {
-    ...theme.typography.headingM,
+    ...theme.typography.headingL,
     color: theme.colors.textPrimary,
   },
   sectionHeaderSubtitle: {
     ...theme.typography.bodyS,
     color: theme.colors.textSecondary,
-    marginTop: theme.spacing.xs,
+    marginTop: 2,
   },
   sectionHeaderAction: {
     ...theme.typography.bodyM,
@@ -485,7 +508,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.xl,
   },
   emptyStateIcon: {
-    marginBottom: theme.spacing.base,
+    marginBottom: theme.spacing.lg,
+    opacity: 0.8,
   },
   emptyStateTitle: {
     ...theme.typography.headingM,
@@ -498,30 +522,33 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
     marginBottom: theme.spacing.xl,
+    maxWidth: 280,
   },
   emptyStateButton: {
-    marginTop: theme.spacing.base,
+    minWidth: 160,
   },
 
   // Divider
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: theme.spacing.md,
+    backgroundColor: theme.colors.gray200,
+    marginVertical: theme.spacing.lg,
   },
   dividerSm: {
-    marginVertical: theme.spacing.sm,
+    marginVertical: theme.spacing.md,
   },
   dividerLg: {
-    marginVertical: theme.spacing.lg,
+    marginVertical: theme.spacing.xl,
   },
 
   // Bottom Action Bar
   bottomActionBar: {
     paddingHorizontal: theme.spacing.base,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? theme.spacing.xxl : theme.spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    ...theme.shadows.sm,
+    borderTopColor: theme.colors.gray100,
+    backgroundColor: theme.colors.white,
+    ...theme.shadows.lg, // Stronger shadow for floating feel
   },
 });

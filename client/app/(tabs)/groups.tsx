@@ -162,7 +162,7 @@ export default function GroupsScreen() {
   };
 
   const handleOpenRide = (rideId: string) => {
-    router.push(`/ride-details?id=${rideId}` as any);
+    router.push(`/ride-details/${rideId}?tab=chat` as any);
   };
 
   const getStatusBadge = (status: string) => {

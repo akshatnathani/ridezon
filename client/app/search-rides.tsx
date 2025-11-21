@@ -1,366 +1,238 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  Platform,
+  FlatList,
   StatusBar,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Alert,
+  Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { theme } from '@/constants/theme';
-import { Button, Tag, BottomActionBar } from '@/components/ui/primitives';
-
-const POPULAR_LOCATIONS = [
-  'University Campus',
-  'Downtown Mall',
-  'Airport',
-  'Train Station',
-  'Tech Park',
-  'City Center',
-];
-
-const DATE_OPTIONS = [
-  { label: 'Any day', value: '' },
-  { label: 'Today', value: 'today' },
-  { label: 'Tomorrow', value: 'tomorrow' },
-  { label: 'This Week', value: 'week' },
-];
+import { ScreenContainer, Card, Button, EmptyState } from '@/components/ui/primitives';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { LocationPicker } from '@/components/ui/LocationPicker';
+import { DateTimePicker } from '@/components/ui/DateTimePicker';
+import { rideService } from '@/services/mock/rideService';
+import { Ride } from '@/types/ride';
+import { RideCard } from '@/components/RideCard';
 
 export default function SearchRidesScreen() {
   const router = useRouter();
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
+  const [date, setDate] = useState<Date | null>(null);
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const handleLocationSelect = (location: string) => {
-    if (!from) {
-      setFrom(location);
-    } else if (!to) {
-      setTo(location);
+  // Pickers
+  const [showPickupPicker, setShowPickupPicker] = useState(false);
+  const [showDropoffPicker, setShowDropoffPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    setSearched(true);
+    try {
+      const response = await rideService.getAvailableRides({
+        from,
+        to,
+        date: date ? date.toISOString() : undefined,
+      });
+      setRides(response.data || []);
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearch = () => {
-    if (!from || !to) {
-      Alert.alert('Missing Information', 'Please enter both pickup and destination locations');
-      return;
+  // Auto-search when filters change
+  useEffect(() => {
+    if (from || to || date) {
+      const timer = setTimeout(handleSearch, 500);
+      return () => clearTimeout(timer);
     }
+  }, [from, to, date]);
 
-    Alert.alert(
-      'Searching',
-      `Finding rides from ${from} to ${to}${selectedDate ? ` (${selectedDate})` : ''}`,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setTimeout(() => {
-              router.back();
-            }, 500);
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} />
-
-      {/* Header */}
-      <View style={styles.header}>
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
+          <IconSymbol name="arrow.left" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search rides</Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.title}>Find a Ride</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Location Inputs */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Route</Text>
-          
-          <View style={styles.inputCard}>
-            <View style={styles.inputRow}>
-              <View style={styles.inputIcon}>
-                <View style={styles.dotFrom} />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Pickup location</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Where are you leaving from?"
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={from}
-                  onChangeText={setFrom}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputDivider} />
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputIcon}>
-                <View style={styles.dotTo} />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Destination</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Where are you going?"
-                  placeholderTextColor={theme.colors.textTertiary}
-                  value={to}
-                  onChangeText={setTo}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Date Options */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>When</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.chipsContainer}
-          >
-            {DATE_OPTIONS.map((option) => (
-              <Tag
-                key={option.value}
-                text={option.label}
-                selected={selectedDate === option.value}
-                onPress={() => setSelectedDate(option.value)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Popular Locations */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Popular locations</Text>
-          <Text style={styles.sectionSubtitle}>
-            Tap to quickly fill in locations
+      <View style={styles.searchInputs}>
+        {/* From */}
+        <TouchableOpacity
+          style={styles.inputButton}
+          onPress={() => setShowPickupPicker(true)}
+        >
+          <IconSymbol name="mappin.circle.fill" size={20} color={theme.colors.primary} />
+          <Text style={[styles.inputText, !from && styles.placeholderText]}>
+            {from || 'Leaving from...'}
           </Text>
-          <View style={styles.popularGrid}>
-            {POPULAR_LOCATIONS.map((location) => (
-              <TouchableOpacity
-                key={location}
-                style={styles.popularChip}
-                onPress={() => handleLocationSelect(location)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.popularChipIcon}>📍</Text>
-                <Text style={styles.popularChipText}>{location}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        </TouchableOpacity>
 
-        {/* Tips */}
-        <View style={styles.tipsCard}>
-          <Text style={styles.tipsIcon}>💡</Text>
-          <View style={styles.tipsContent}>
-            <Text style={styles.tipsTitle}>Search tip</Text>
-            <Text style={styles.tipsText}>
-              Try searching for nearby landmarks or popular locations for more results
-            </Text>
-          </View>
-        </View>
-      </ScrollView>
+        {/* To */}
+        <TouchableOpacity
+          style={styles.inputButton}
+          onPress={() => setShowDropoffPicker(true)}
+        >
+          <IconSymbol name="mappin.circle.fill" size={20} color={theme.colors.textPrimary} />
+          <Text style={[styles.inputText, !to && styles.placeholderText]}>
+            {to || 'Going to...'}
+          </Text>
+        </TouchableOpacity>
 
-      {/* Bottom Action Bar */}
-      <BottomActionBar>
-        <Button
-          title="Search rides"
-          onPress={handleSearch}
-          variant="primary"
-          size="lg"
-          fullWidth
-        />
-      </BottomActionBar>
-    </KeyboardAvoidingView>
+        {/* Date */}
+        <TouchableOpacity
+          style={styles.inputButton}
+          onPress={() => setShowDatePicker(true)}
+        >
+          <IconSymbol name="calendar" size={20} color={theme.colors.textSecondary} />
+          <Text style={[styles.inputText, !date && styles.placeholderText]}>
+            {date ? date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Any date'}
+          </Text>
+          {date && (
+            <TouchableOpacity onPress={() => setDate(null)} style={styles.clearDate}>
+              <IconSymbol name="xmark.circle.fill" size={16} color={theme.colors.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  return (
+    <ScreenContainer edges={['top']} backgroundColor={theme.colors.backgroundSecondary}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
+      <FlatList
+        data={rides}
+        renderItem={({ item }) => (
+          <RideCard
+            ride={item}
+            onPress={() => router.push(`/ride-details/${item.id}` as any)}
+          />
+        )}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        ListHeaderComponent={renderHeader}
+        ListEmptyComponent={
+          !loading && searched ? (
+            <EmptyState
+              icon={<Text style={{ fontSize: 40 }}>🔍</Text>}
+              title="No rides found"
+              subtitle="Try changing your search filters"
+            />
+          ) : !loading && !searched ? (
+            <View style={styles.initialState}>
+              <Text style={styles.initialText}>Enter a location to start searching</Text>
+            </View>
+          ) : null
+        }
+      />
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      )}
+
+      {/* Modals */}
+      <LocationPicker
+        visible={showPickupPicker}
+        onClose={() => setShowPickupPicker(false)}
+        onSelect={(loc) => setFrom(loc)}
+        placeholder="Search pickup location"
+      />
+      <LocationPicker
+        visible={showDropoffPicker}
+        onClose={() => setShowDropoffPicker(false)}
+        onSelect={(loc) => setTo(loc)}
+        placeholder="Search dropoff location"
+      />
+      <DateTimePicker
+        visible={showDatePicker}
+        mode="date"
+        value={date || new Date()}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={(d) => setDate(d)}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.backgroundSecondary,
-  },
-
-  // Header
   header: {
+    backgroundColor: theme.colors.white,
+    paddingBottom: theme.spacing.md,
+    borderBottomLeftRadius: theme.radius.xl,
+    borderBottomRightRadius: theme.radius.xl,
+    ...theme.shadows.sm,
+    marginBottom: theme.spacing.md,
+  },
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: theme.spacing.xs,
-    paddingTop: Platform.OS === 'ios' ? theme.spacing.xxxxl + 8 : theme.spacing.base,
-    paddingBottom: theme.spacing.base,
-    backgroundColor: theme.colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    fontSize: 28,
-    color: theme.colors.textPrimary,
-  },
-  headerTitle: {
-    ...theme.typography.headingM,
-    color: theme.colors.textPrimary,
-  },
-  headerSpacer: {
-    width: 44,
-  },
-
-  // Content
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: theme.spacing.base,
-    paddingBottom: 120,
-  },
-
-  // Sections
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  sectionTitle: {
-    ...theme.typography.headingS,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  sectionSubtitle: {
-    ...theme.typography.bodyS,
-    color: theme.colors.textSecondary,
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: Platform.OS === 'ios' ? 10 : theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
-
-  // Input Card
-  inputCard: {
-    backgroundColor: theme.colors.surface,
+  backButton: {
+    padding: theme.spacing.xs,
+  },
+  title: {
+    ...theme.typography.headingS,
+    color: theme.colors.textPrimary,
+  },
+  searchInputs: {
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.sm,
+  },
+  inputButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: theme.colors.gray100,
+    padding: theme.spacing.md,
     borderRadius: theme.radius.lg,
-    ...theme.shadows.md,
+    gap: theme.spacing.md,
   },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.base,
-  },
-  inputIcon: {
-    width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  dotFrom: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.primary,
-  },
-  dotTo: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: theme.colors.gray900,
-  },
-  inputContainer: {
+  inputText: {
     flex: 1,
-  },
-  inputLabel: {
-    ...theme.typography.captionL,
-    color: theme.colors.textSecondary,
-    marginBottom: theme.spacing.xs,
-  },
-  input: {
     ...theme.typography.bodyM,
     color: theme.colors.textPrimary,
-    padding: 0,
   },
-  inputDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginLeft: 64,
+  placeholderText: {
+    color: theme.colors.textTertiary,
   },
-
-  // Chips
-  chipsContainer: {
-    gap: theme.spacing.sm,
+  clearDate: {
+    padding: 4,
   },
-
-  // Popular Locations
-  popularGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
+  listContent: {
+    paddingBottom: 100,
   },
-  popularChip: {
-    flexDirection: 'row',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 250,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: theme.spacing.base,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.radius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.sm,
   },
-  popularChipIcon: {
-    fontSize: theme.iconSize.sm,
-    marginRight: theme.spacing.sm,
+  initialState: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
   },
-  popularChipText: {
-    ...theme.typography.bodyS,
-    color: theme.colors.textPrimary,
-  },
-
-  // Tips
-  tipsCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.primaryLight,
-    padding: theme.spacing.base,
-    borderRadius: theme.radius.md,
-    marginTop: theme.spacing.base,
-  },
-  tipsIcon: {
-    fontSize: theme.iconSize.lg,
-    marginRight: theme.spacing.md,
-  },
-  tipsContent: {
-    flex: 1,
-  },
-  tipsTitle: {
+  initialText: {
     ...theme.typography.bodyM,
-    color: theme.colors.textPrimary,
-    fontWeight: '600',
-    marginBottom: theme.spacing.xs,
-  },
-  tipsText: {
-    ...theme.typography.bodyS,
     color: theme.colors.textSecondary,
-    lineHeight: 20,
   },
 });

@@ -14,60 +14,44 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { theme } from '@/constants/theme';
+import { ScreenContainer, Card, Button, SectionHeader, BottomActionBar } from '@/components/ui/primitives';
+import { rideService } from '@/services/mock/rideService';
+import { LocationPicker } from '@/components/ui/LocationPicker';
+import { DateTimePicker } from '@/components/ui/DateTimePicker';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 export default function CreateRideScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     from: '',
     to: '',
-    departureDate: '',
-    departureTime: '',
-    arrivalDate: '',
-    arrivalTime: '',
-    seats: '',
+    departureDate: new Date(),
+    arrivalDate: new Date(new Date().getTime() + 2 * 60 * 60 * 1000), // Default 2 hours later
+    seats: '3',
     price: '',
     description: '',
     femaleOnly: false,
   });
 
-  const [itinerary, setItinerary] = useState<string[]>(['']);
+  // Picker States
+  const [showPickupPicker, setShowPickupPicker] = useState(false);
+  const [showDropoffPicker, setShowDropoffPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [dateMode, setDateMode] = useState<'departure' | 'arrival'>('departure');
 
-  const handleAddItineraryStop = () => {
-    setItinerary([...itinerary, '']);
-  };
-
-  const handleRemoveItineraryStop = (index: number) => {
-    const updated = itinerary.filter((_, i) => i !== index);
-    setItinerary(updated);
-  };
-
-  const handleItineraryChange = (index: number, value: string) => {
-    const updated = [...itinerary];
-    updated[index] = value;
-    setItinerary(updated);
-  };
-
-  const handleCreateRide = () => {
+  const handleCreateRide = async () => {
     // Validation
     if (!formData.from || !formData.to) {
       Alert.alert('Missing Information', 'Please fill in pickup and dropoff locations');
       return;
     }
 
-    if (!formData.departureDate || !formData.departureTime) {
-      Alert.alert('Missing Information', 'Please fill in departure date and time');
-      return;
-    }
-
-    if (!formData.arrivalDate || !formData.arrivalTime) {
-      Alert.alert('Missing Information', 'Please fill in arrival date and time');
-      return;
-    }
-
-    if (!formData.seats || !formData.price) {
-      Alert.alert('Missing Information', 'Please fill in seats and price');
+    if (!formData.price) {
+      Alert.alert('Missing Information', 'Please fill in the price');
       return;
     }
 
@@ -83,274 +67,289 @@ export default function CreateRideScreen() {
       return;
     }
 
-    // Filter out empty itinerary items
-    const validItinerary = itinerary.filter(stop => stop.trim() !== '');
+    try {
+      const rideData = {
+        start_location_name: formData.from,
+        destination_name: formData.to,
+        scheduled_start_time: formData.departureDate.toISOString(),
+        total_seats: seatsNum,
+        price_per_seat: priceNum,
+        description: formData.description,
+        is_female_only: formData.femaleOnly,
+      };
 
-    // TODO: Save ride to Supabase
-    const rideData = {
-      ...formData,
-      itinerary: validItinerary,
-      createdBy: user?.id,
-      createdAt: new Date().toISOString(),
-    };
+      const response = await rideService.createRide(rideData);
 
-    console.log('Creating ride:', rideData);
+      if (response.error) {
+        Alert.alert('Error', response.error);
+        return;
+      }
 
-    Alert.alert(
-      'Ride Created!',
-      'Your ride has been posted successfully.',
-      [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]
-    );
+      Alert.alert(
+        'Ride Created!',
+        'Your ride has been posted successfully.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Failed to create ride:', error);
+      Alert.alert('Error', 'An unexpected error occurred.');
+    }
+  };
+
+  const openDatePicker = (mode: 'departure' | 'arrival') => {
+    setDateMode(mode);
+    setShowDatePicker(true);
+  };
+
+  const openTimePicker = (mode: 'departure' | 'arrival') => {
+    setDateMode(mode);
+    setShowTimePicker(true);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    if (dateMode === 'departure') {
+      // Preserve time
+      const newDate = new Date(date);
+      newDate.setHours(formData.departureDate.getHours());
+      newDate.setMinutes(formData.departureDate.getMinutes());
+      setFormData({ ...formData, departureDate: newDate });
+    } else {
+      const newDate = new Date(date);
+      newDate.setHours(formData.arrivalDate.getHours());
+      newDate.setMinutes(formData.arrivalDate.getMinutes());
+      setFormData({ ...formData, arrivalDate: newDate });
+    }
+  };
+
+  const handleTimeSelect = (date: Date) => {
+    if (dateMode === 'departure') {
+      setFormData({ ...formData, departureDate: date });
+    } else {
+      setFormData({ ...formData, arrivalDate: date });
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <ScreenContainer edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>✕</Text>
+          <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Ride</Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Route Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🚗 Route Details</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>From</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Pickup location"
-              placeholderTextColor="#8e8e93"
-              value={formData.from}
-              onChangeText={(text) => setFormData({ ...formData, from: text })}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>To</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Dropoff location"
-              placeholderTextColor="#8e8e93"
-              value={formData.to}
-              onChangeText={(text) => setFormData({ ...formData, to: text })}
-            />
-          </View>
-        </View>
-
-        {/* Itinerary Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📍 Route Itinerary (Optional)</Text>
-          <Text style={styles.sectionDescription}>
-            Add stops along the way to help passengers find your ride
-          </Text>
-
-          {itinerary.map((stop, index) => (
-            <View key={index} style={styles.itineraryItem}>
-              <TextInput
-                style={styles.itineraryInput}
-                placeholder={`Stop ${index + 1}`}
-                placeholderTextColor="#8e8e93"
-                value={stop}
-                onChangeText={(text) => handleItineraryChange(index, text)}
-              />
-              {itinerary.length > 1 && (
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveItineraryStop(index)}
-                >
-                  <Text style={styles.removeButtonText}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-
-          <TouchableOpacity
-            style={styles.addStopButton}
-            onPress={handleAddItineraryStop}
-          >
-            <Text style={styles.addStopButtonText}>+ Add Stop</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Schedule Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🕐 Departure</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Date</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#8e8e93"
-                value={formData.departureDate}
-                onChangeText={(text) => setFormData({ ...formData, departureDate: text })}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Time</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#8e8e93"
-                value={formData.departureTime}
-                onChangeText={(text) => setFormData({ ...formData, departureTime: text })}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Arrival Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏁 Arrival</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Date</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#8e8e93"
-                value={formData.arrivalDate}
-                onChangeText={(text) => setFormData({ ...formData, arrivalDate: text })}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Time</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM AM/PM"
-                placeholderTextColor="#8e8e93"
-                value={formData.arrivalTime}
-                onChangeText={(text) => setFormData({ ...formData, arrivalTime: text })}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Capacity & Price Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💺 Capacity & Cost</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Available Seats</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="1-8"
-                placeholderTextColor="#8e8e93"
-                keyboardType="number-pad"
-                maxLength={1}
-                value={formData.seats}
-                onChangeText={(text) => setFormData({ ...formData, seats: text })}
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Price per Seat ($)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                placeholderTextColor="#8e8e93"
-                keyboardType="decimal-pad"
-                value={formData.price}
-                onChangeText={(text) => setFormData({ ...formData, price: text })}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Description Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📝 Description</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Add any additional details about your ride..."
-            placeholderTextColor="#8e8e93"
-            multiline
-            numberOfLines={4}
-            value={formData.description}
-            onChangeText={(text) => setFormData({ ...formData, description: text })}
-          />
-        </View>
-
-        {/* Preferences Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚙️ Preferences</Text>
-
-          <View style={styles.switchRow}>
-            <View style={styles.switchLabel}>
-              <Text style={styles.switchText}>Female Only</Text>
-              <Text style={styles.switchSubtext}>
-                Only female passengers can request this ride
-              </Text>
-            </View>
-            <Switch
-              value={formData.femaleOnly}
-              onValueChange={(value) => setFormData({ ...formData, femaleOnly: value })}
-              trackColor={{ false: '#d1d1d6', true: '#000000' }}
-              thumbColor="#ffffff"
-            />
-          </View>
-        </View>
-
-        {/* Info Box */}
-        <View style={styles.infoBox}>
-          <Text style={styles.infoText}>
-            ℹ️ Your name and phone number will be visible to passengers who request to join your ride.
-          </Text>
-        </View>
-      </ScrollView>
-
-      {/* Fixed Bottom Button */}
-      <View style={styles.bottomContainer}>
-        <View style={styles.separator} />
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={handleCreateRide}
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.createButtonText}>Create Ride</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          {/* Route Section */}
+          <Card shadow="sm" style={styles.card}>
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <IconSymbol name="mappin.circle.fill" size={16} color={theme.colors.primary} />
+                <Text style={styles.label}>Pickup</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowPickupPicker(true)}
+              >
+                <Text style={[styles.pickerText, !formData.from && styles.placeholderText]}>
+                  {formData.from || 'Select pickup location'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.routeLine} />
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <IconSymbol name="mappin.circle.fill" size={16} color={theme.colors.textPrimary} />
+                <Text style={styles.label}>Dropoff</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowDropoffPicker(true)}
+              >
+                <Text style={[styles.pickerText, !formData.to && styles.placeholderText]}>
+                  {formData.to || 'Select dropoff location'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+
+          {/* Schedule Section */}
+          <Card shadow="sm" style={styles.card}>
+            <SectionHeader title="Schedule" />
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.subLabel}>Date</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => openDatePicker('departure')}
+                >
+                  <Text style={styles.pickerText}>
+                    {formData.departureDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                  <IconSymbol name="calendar" size={16} color={theme.colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.subLabel}>Time</Text>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => openTimePicker('departure')}
+                >
+                  <Text style={styles.pickerText}>
+                    {formData.departureDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  <IconSymbol name="clock" size={16} color={theme.colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Card>
+
+          {/* Capacity & Price Section */}
+          <Card shadow="sm" style={styles.card}>
+            <SectionHeader title="Details" />
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.subLabel}>Seats</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="3"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="number-pad"
+                  maxLength={1}
+                  value={formData.seats}
+                  onChangeText={(text) => setFormData({ ...formData, seats: text })}
+                />
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.subLabel}>Price (₹)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0"
+                  placeholderTextColor={theme.colors.textTertiary}
+                  keyboardType="decimal-pad"
+                  value={formData.price}
+                  onChangeText={(text) => setFormData({ ...formData, price: text })}
+                />
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Add notes (optional)..."
+              placeholderTextColor={theme.colors.textTertiary}
+              multiline
+              numberOfLines={3}
+              value={formData.description}
+              onChangeText={(text) => setFormData({ ...formData, description: text })}
+            />
+          </Card>
+
+          {/* Preferences Section */}
+          <Card shadow="sm" style={styles.card}>
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabel}>
+                <Text style={styles.switchText}>Female Only Ride</Text>
+                <Text style={styles.switchSubtext}>
+                  Visible only to female passengers
+                </Text>
+              </View>
+              <Switch
+                value={formData.femaleOnly}
+                onValueChange={(value) => setFormData({ ...formData, femaleOnly: value })}
+                trackColor={{ false: theme.colors.gray200, true: theme.colors.primary }}
+                thumbColor="#ffffff"
+                ios_backgroundColor={theme.colors.gray200}
+              />
+            </View>
+          </Card>
+
+          <View style={styles.spacer} />
+        </ScrollView>
+
+        {/* Fixed Bottom Button */}
+        <BottomActionBar>
+          <Button
+            title="Publish Ride"
+            variant="primary"
+            onPress={handleCreateRide}
+            fullWidth
+            size="lg"
+          />
+        </BottomActionBar>
+      </KeyboardAvoidingView>
+
+      {/* Modals */}
+      <LocationPicker
+        visible={showPickupPicker}
+        onClose={() => setShowPickupPicker(false)}
+        onSelect={(loc) => setFormData({ ...formData, from: loc })}
+        placeholder="Search pickup location"
+      />
+      <LocationPicker
+        visible={showDropoffPicker}
+        onClose={() => setShowDropoffPicker(false)}
+        onSelect={(loc) => setFormData({ ...formData, to: loc })}
+        placeholder="Search dropoff location"
+      />
+
+      <DateTimePicker
+        visible={showDatePicker}
+        mode="date"
+        value={dateMode === 'departure' ? formData.departureDate : formData.arrivalDate}
+        onClose={() => setShowDatePicker(false)}
+        onSelect={handleDateSelect}
+      />
+
+      <DateTimePicker
+        visible={showTimePicker}
+        mode="time"
+        value={dateMode === 'departure' ? formData.departureDate : formData.arrivalDate}
+        onClose={() => setShowTimePicker(false)}
+        onSelect={handleTimeSelect}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    paddingBottom: 20,
-    backgroundColor: '#ffffff',
+    paddingHorizontal: theme.spacing.md,
+    paddingTop: Platform.OS === 'ios' ? 60 : theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    backgroundColor: theme.colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
   backButton: {
     width: 40,
@@ -360,172 +359,120 @@ const styles = StyleSheet.create({
     marginLeft: -8,
   },
   backText: {
-    fontSize: 28,
-    fontWeight: '300',
-    color: '#000000',
+    ...theme.typography.headingL,
+    color: theme.colors.textPrimary,
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-    letterSpacing: -0.4,
+    ...theme.typography.headingS,
+    color: theme.colors.textPrimary,
   },
   placeholder: {
     width: 40,
   },
   content: {
     flex: 1,
+    backgroundColor: theme.colors.gray50,
   },
   scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 40,
+    padding: theme.spacing.md,
+    paddingBottom: 100,
   },
-  section: {
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    marginBottom: 12,
+  card: {
+    marginBottom: theme.spacing.md,
+    padding: theme.spacing.md,
   },
-  sectionTitle: {
-    fontSize: 13,
+  inputGroup: {
+    marginBottom: theme.spacing.sm,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  label: {
+    ...theme.typography.bodyS,
     fontWeight: '600',
-    color: '#8e8e93',
-    marginBottom: 16,
+    color: theme.colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  sectionDescription: {
-    fontSize: 15,
-    color: '#8e8e93',
-    marginBottom: 16,
-    lineHeight: 21,
+  subLabel: {
+    ...theme.typography.captionM,
+    color: theme.colors.textSecondary,
+    marginBottom: 4,
   },
-  inputGroup: {
-    marginBottom: 20,
+  pickerButton: {
+    backgroundColor: theme.colors.gray100,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  label: {
-    fontSize: 15,
-    fontWeight: '400',
-    color: '#000000',
-    marginBottom: 8,
+  pickerText: {
+    ...theme.typography.bodyM,
+    color: theme.colors.textPrimary,
+  },
+  placeholderText: {
+    color: theme.colors.textTertiary,
   },
   input: {
-    backgroundColor: '#f7f7f7',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 17,
-    color: '#000000',
+    backgroundColor: theme.colors.gray100,
+    borderRadius: theme.radius.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    ...theme.typography.bodyM,
+    color: theme.colors.textPrimary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-    paddingTop: 12,
+  routeLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: theme.colors.gray300,
+    marginLeft: 7, // Align with icons
+    marginVertical: 2,
   },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.md,
   },
   halfWidth: {
     flex: 1,
   },
-  itineraryItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: theme.spacing.md,
   },
-  itineraryInput: {
-    flex: 1,
-    backgroundColor: '#f7f7f7',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 17,
-    color: '#000000',
-  },
-  removeButton: {
-    width: 32,
-    height: 32,
-    backgroundColor: '#000000',
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  removeButtonText: {
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: '400',
-  },
-  addStopButton: {
-    backgroundColor: '#f7f7f7',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e5e5e5',
-  },
-  addStopButtonText: {
-    fontSize: 17,
-    fontWeight: '400',
-    color: '#000000',
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: theme.spacing.sm,
   },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 4,
   },
   switchLabel: {
     flex: 1,
-    marginRight: 16,
+    marginRight: theme.spacing.md,
   },
   switchText: {
-    fontSize: 17,
-    fontWeight: '400',
-    color: '#000000',
-    marginBottom: 4,
+    ...theme.typography.bodyM,
+    fontWeight: '600',
+    color: theme.colors.textPrimary,
   },
   switchSubtext: {
-    fontSize: 15,
-    color: '#8e8e93',
-    lineHeight: 20,
+    ...theme.typography.captionM,
+    color: theme.colors.textSecondary,
   },
-  infoBox: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 15,
-    color: '#8e8e93',
-    lineHeight: 21,
-  },
-  bottomContainer: {
-    backgroundColor: '#ffffff',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#e5e5e5',
-  },
-  createButton: {
-    backgroundColor: '#000000',
-    marginHorizontal: 20,
-    marginTop: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  createButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#ffffff',
-    letterSpacing: -0.4,
+  spacer: {
+    height: 40,
   },
 });
